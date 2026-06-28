@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { motion } from "motion/react";
 import { 
   Play, 
@@ -35,79 +35,99 @@ export const SiliconEngineeringVideoPlayer: React.FC = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [useVoiceover, setUseVoiceover] = useState(true);
 
-  // 8 Chapters matching the 8 steps on the front page
-  const chapters = [
-    {
-      id: "arch",
-      title: "1. Specification & Architecture",
-      start: 0,
-      end: 60,
-      caption: "Every successful chip starts with an idea—not with code. Imagine a company wants to build the next-generation AI processor for smartphones. The first question isn't 'How do we design it?' The first question is 'What should this chip be capable of?' This is where the specification phase begins. Product managers, system architects, software engineers, hardware engineers, and customers work together to define the product requirements. They answer questions like: What applications will this chip run? How much AI performance is required? What is the maximum power consumption? What battery life should the device achieve? How much heat can it generate? What manufacturing technology should be used—3nm, 5nm, or 7nm? What is the target production cost? These requirements become the official specification document, which acts as the contract for every engineering team. Once the specifications are finalized, system architects begin designing the internal architecture. Think of this like designing a city before constructing any buildings. They decide: How many CPU cores? Should there be a GPU? Do we need an AI accelerator? How much cache memory? Which communication protocols should be supported? How will all these blocks communicate? Before anything is built, architects evaluate different design options using high-level performance models and simulations. They estimate performance, power consumption, bandwidth, memory usage, and overall efficiency. Multiple architectural alternatives are compared until the best balance between Performance, Power, and Area—commonly called PPA—is achieved. The output of this stage is a complete architectural specification that guides every engineering team throughout the project. Now that we know exactly what needs to be built, it's time to convert this architecture into digital hardware using RTL.",
-      technical: "Workload Profile: Transformer Decoder Layer • Parameter Count: 7B • Precision: FP16 • Compute Intensity: 14.2 TOPS • Target Die Budget: 4.5 mm²"
-    },
-    {
-      id: "rtl",
-      title: "2. RTL Design (Front-End)",
-      start: 60,
-      end: 120,
-      caption: "Now that the system architecture and PPA targets are finalized, we enter the Register Transfer Level, or RTL design phase. This is where hardware designers translate architectural diagrams into actual digital logic. We write code using high-level Hardware Description Languages—primarily SystemVerilog or VHDL. Unlike writing software for a CPU where instructions execute sequentially, writing RTL is about designing physical hardware that operates concurrently. Every line of code describes hardware blocks, logic gates, and wire connections that run in parallel on every single clock cycle. We structure the design around registers—which act as memory storage cells—and combinational logic blocks that perform calculations as data flows between registers. For an AI processor, RTL designers create specialized components like Multiply-Accumulate, or MAC units, and arrange them into structured arrays. These systolic arrays process matrix multiplications in parallel, flowing weights and inputs step-by-step through register stages. Designers also build custom memory controllers, on-chip buses using protocols like AXI or APB, and control state machines to coordinate data movement. Every signal must be meticulously designed to meet clock targets—for example, a 1.2 Gigahertz target means data has only eight-hundred and thirty-three picoseconds to propagate from one register to the next. Once the RTL description is complete, we have a digital blueprint of the chip, but before we turn it into physical gates, we must prove that this complex logic actually works without a single error.",
-      technical: "Hardware Description: IEEE 1800 SystemVerilog • Register Interfaces: AXI4/APB Mirror • Bus Protocols: 128-bit Interconnect • Clock Targets: 1.2 GHz"
-    },
-    {
-      id: "val",
-      title: "3. Verification & Simulation",
-      start: 120,
-      end: 180,
-      caption: "With the RTL code written, we enter the critical phase of functional verification and simulation. A single mistake in a chip's logic can render a multi-million dollar piece of silicon completely useless. That is why verification engineers are often called the detectives of the semiconductor world, and why verification typically consumes up to seventy percent of the total chip development time and budget. Rather than testing the design manually, engineers build complex, automated environments using the Universal Verification Methodology, or UVM. We construct a testbench—a software simulation environment that wraps around our RTL design. The testbench generates millions of randomized stimulus inputs to stress-test the hardware under extreme, unexpected conditions. It sends random packets of data, triggers unexpected clock-gating cycles, and injects errors to see if the hardware recovers correctly. Monitors watch the internal signals, and scoreboards automatically compare the RTL behavior against an independent, gold-standard mathematical model of the architecture. We also embed SystemVerilog Assertions directly inside the design to constantly police critical rules—ensuring, for instance, that a FIFO queue never overflows, or that two controllers never try to write to the same bus simultaneously. We track code and functional coverage to ensure every single pathway and conditional branch has been executed and verified. Only when the testbench reaches one-hundred percent coverage and zero bugs can we confidently sign off on the design and prepare to translate our abstract code into actual physical structures.",
-      technical: "Testbench Engine: UVM Suite v1.2 • Active Checkers: 450 Assertions • Target Toggle Coverage: 98.4% • Bug Regression Status: 100% Passing"
-    },
-    {
-      id: "synthesis",
-      title: "4. Logic Synthesis",
-      start: 180,
-      end: 240,
-      caption: "Once the RTL code is completely verified and bug-free, we transition from the abstract software domain to the physical hardware domain through Logic Synthesis. Synthesis is the process of translating our high-level, human-readable SystemVerilog code into a concrete gate-level netlist. To do this, we use highly sophisticated synthesis tools and a standard cell library provided by the semiconductor foundry, such as TSMC or Samsung. This library contains pre-designed physical layouts for fundamental building blocks—like NAND gates, NOR gates, multiplexers, and flip-flops—each characterized with precise measurements of timing, power, and area. The synthesis tool acts like an extremely advanced compiler. It parses our RTL logic and maps it to these standard cells, optimizing the layout to meet our target timing constraints. We feed the tool a design constraints file that defines the clock frequencies, input delays, and output loads. The compiler then runs millions of iterations, sizing gates and adjusting logic paths to ensure that signals propagate fast enough to prevent setup and hold violations. If a signal arrives too late at a register, it causes timing violations and functional failure. Synthesis output is a gate-level netlist—a massive text file listing millions of standard cells and the microscopic wires that connect them. This netlist is mathematically equivalent to our original RTL, but it is now expressed entirely in physical electronic components ready for layout.",
-      technical: "Target Technology Node: TSMC 5nm FinFET • Standard Cell Library: High-Density (HD) Track • Timing Slack Target: +0.05 ns • Total Equivalent Gate Count: 14.2M Gates"
-    },
-    {
-      id: "phys",
-      title: "5. Physical Design (Back-End)",
-      start: 240,
-      end: 300,
-      caption: "With the gate-level netlist completed, we move to the physical design phase—the physical implementation of the netlist onto a silicon die. This is where we define the exact coordinates of every transistor and wire. We begin with Floorplanning, where we decide the absolute layout of the chip. We allocate areas for large IP blocks—like CPU cores, GPU engines, memory controllers, and the Multiply-Accumulate arrays—and set up the power grid of copper tracks to distribute stable voltage across the chip. Next is Placement, where the tool places millions of standard cells within the remaining silicon real estate, grouping related components close together to minimize wire length and signal delay. We then perform Clock Tree Synthesis to build a dedicated network of buffer gates that distributes the clock signal simultaneously to every single register on the chip, preventing clock skew. Following this, the Routing engine draws the final microscopic physical copper wires to connect the cells across multiple metal layers, navigating complex paths like a highly dense city highway system. Throughout this process, we perform continuous Design Rule Checks, or DRC, to ensure wire spacings conform to atomic lithography limits, and Layout Versus Schematic, or LVS, checks to verify that the physical wiring perfectly matches the original synthesized netlist. The result is a clean, physically sound layout ready for manufacturing.",
-      technical: "Layout Grid: 12 Metal Layers • Density Constraint: 84.2% Area Utilization • DRC Errors: 0 Clean • LVS Check: Match Layout with Schematic"
-    },
-    {
-      id: "mask",
-      title: "6. GDSII / Mask Generation",
-      start: 300,
-      end: 360,
-      caption: "Once the physical layout is completed and passes all verification checks, we export the physical coordinates into an industry-standard database format, typically GDSII or OASIS. This file contains the precise geometric polygons representing every single wire, via, and transistor layer on the silicon die. This data is used to manufacture the photolithographic masks, which are polished glass plates coated with chrome patterns. Think of these masks like high-tech stencils or photographic negatives. To manufacture a modern chip, we require a set of seventy or more individual masks—one for each physical layer of the silicon, from the base silicon implants up to the final metal interconnects. However, at advanced process nodes like three-nanometer or five-nanometer, the physical wavelength of the lasers used in manufacturing is larger than the microscopic wires we are trying to print. This causes severe light diffraction, blurring the printed features. To combat this, we perform Optical Proximity Correction, or OPC. Advanced algorithms modify the shapes on the mask—adding serifs to corners, shifting edges, and adding auxiliary features—so that when the laser light diffracts, it lands on the silicon in the exact rectangular shape we intended. Once OPC is completed and verified, the finalized mask data is sent to a mask-writing facility to create the physical mask set, representing the official transition of our design into physical manufacturing.",
-      technical: "Database Format: GDSII Stream Format • Photolithography Masks: 72 Glass Plates • EUV Wavelength: 13.5 nm • OPC Resolution Enhancements: Active"
-    },
-    {
-      id: "fab",
-      title: "7. Fabrication & Packaging",
-      start: 360,
-      end: 420,
-      caption: "With the physical mask sets complete, we enter the high-precision world of Semiconductor Fabrication and Packaging. Manufacturing takes place inside a semiconductor fabrication plant—often called a fab or a cleanroom—where the air is hundreds of times cleaner than an operating room to prevent microscopic dust from ruining the silicon. The process starts with a circular wafer of pure, ultra-refined silicon, typically three-hundred millimeters in diameter. Over several months, the wafer undergoes a repetitive cycle of hundreds of steps to build the transistors layer by layer. First, we apply a light-sensitive chemical called photoresist to the wafer. We shine deep or extreme ultraviolet light through our photolithographic masks to project the circuit patterns onto the silicon. Exposed areas are chemically washed away in an etching process, and we introduce atomic impurities—called ion implantation—to modify the electrical conductivity of the silicon, creating source and drain regions for our transistors. This cycle repeats for dozens of layers, building up three-dimensional FinFET structures and stacking multiple levels of copper wires to connect them. Once the wafer is fully processed, it is tested for functional yield and diced into thousands of individual rectangular silicon chips, known as dies. Each working die is mounted inside a protective package. We use advanced Flip-Chip packaging, bonding microscopic solder bumps on the chip directly to a package substrate, which is sealed with a metal lid to dissipate heat and expose pins for soldering onto system boards.",
-      technical: "Wafer Geometry: 300mm Silicon • Process technology: EUV Lithography • Packaging Style: Flip-Chip Ball Grid Array (FC-BGA) • Pins Count: 1156 Bumps"
-    },
-    {
-      id: "postval",
-      title: "8. Post-Silicon Validation",
-      start: 420,
-      end: 480,
-      caption: "Finally, the manufactured and packaged silicon chips arrive back at our testing laboratories, marking the start of Post-Silicon Validation. This is the moment of truth. Unlike pre-silicon simulations which run in software at a snail's pace of a few hertz, physical chips run at their full multi-gigahertz speed in real-time. We mount the first-spin engineering samples onto custom validation boards equipped with specialized testing rigs, cooling chambers, and high-frequency oscilloscopes. We run stress-testing software, operating systems, and real-world AI model workloads to verify that the physical silicon behaves exactly as designed. We perform voltage and temperature sweeps, plotting what is called a Shmoo curve to map out the exact envelope of stable operation. This tells us the maximum frequency the chip can achieve at different supply voltages, and identifies the physical margins of the silicon. We also test for physical reliability and thermal characteristics over extended periods. Even with the best pre-silicon testing, real silicon often reveals subtle hardware errata or bugs. We document these in official errata lists and design firmware or driver workarounds to disable problematic features or adjust timing parameters. Once the chip passes post-silicon validation, has its firmware certified, and reaches target production yields, it is officially ready to be mass-produced and shipped to power consumer devices worldwide.",
-      technical: "Lab Validation Board: PCIe Gen5 DevKit • Shmoo Sweep Bounds: 0.7V to 1.15V @ 500MHz to 2.5GHz • Thermal Chambers: -40C to +125C Range • Errata List: 0 Critical Bugs"
+  // 8 Chapters matching the 8 steps on the front page, calculated with natural durations based on word count
+  const chapters = useMemo(() => {
+    const rawChapters = [
+      {
+        id: "arch",
+        title: "1. Specification & Architecture",
+        caption: "Every successful chip starts with an idea—not with code. Imagine a company wants to build the next-generation AI processor for smartphones. The first question isn't 'How do we design it?' The first question is 'What should this chip be capable of?' This is where the specification phase begins. Product managers, system architects, software engineers, hardware engineers, and customers work together to define the product requirements. They answer questions like: What applications will this chip run? How much AI performance is required? What is the maximum power consumption? What battery life should the device achieve? How much heat can it generate? What manufacturing technology should be used—3nm, 5nm, or 7nm? What is the target production cost? These requirements become the official specification document, which acts as the contract for every engineering team. Once the specifications are finalized, system architects begin designing the internal architecture. Think of this like designing a city before constructing any buildings. They decide: How many CPU cores? Should there be a GPU? Do we need an AI accelerator? How much cache memory? Which communication protocols should be supported? How will all these blocks communicate? Before anything is built, architects evaluate different design options using high-level performance models and simulations. They estimate performance, power consumption, bandwidth, memory usage, and overall efficiency. Multiple architectural alternatives are compared until the best balance between Performance, Power, and Area—commonly called PPA—is achieved. The output of this stage is a complete architectural specification that guides every engineering team throughout the project. Now that we know exactly what needs to be built, it's time to convert this architecture into digital hardware using RTL.",
+        technical: "Workload Profile: Transformer Decoder Layer • Parameter Count: 7B • Precision: FP16 • Compute Intensity: 14.2 TOPS • Target Die Budget: 4.5 mm²"
+      },
+      {
+        id: "rtl",
+        title: "2. RTL Design (Front-End)",
+        caption: "Now that the system architecture and PPA targets are finalized, we enter the Register Transfer Level, or RTL design phase. This is where hardware designers translate architectural diagrams into actual digital logic. We write code using high-level Hardware Description Languages—primarily SystemVerilog or VHDL. Unlike writing software for a CPU where instructions execute sequentially, writing RTL is about designing physical hardware that operates concurrently. Every line of code describes hardware blocks, logic gates, and wire connections that run in parallel on every single clock cycle. We structure the design around registers—which act as memory storage cells—and combinational logic blocks that perform calculations as data flows between registers. For an AI processor, RTL designers create specialized components like Multiply-Accumulate, or MAC units, and arrange them into structured arrays. These systolic arrays process matrix multiplications in parallel, flowing weights and inputs step-by-step through register stages. Designers also build custom memory controllers, on-chip buses using protocols like AXI or APB, and control state machines to coordinate data movement. Every signal must be meticulously designed to meet clock targets—for example, a 1.2 Gigahertz target means data has only eight-hundred and thirty-three picoseconds to propagate from one register to the next. Once the RTL description is complete, we have a digital blueprint of the chip, but before we turn it into physical gates, we must prove that this complex logic actually works without a single error.",
+        technical: "Hardware Description: IEEE 1800 SystemVerilog • Register Interfaces: AXI4/APB Mirror • Bus Protocols: 128-bit Interconnect • Clock Targets: 1.2 GHz"
+      },
+      {
+        id: "val",
+        title: "3. Verification & Simulation",
+        caption: "With the RTL code written, we enter the critical phase of functional verification and simulation. A single mistake in a chip's logic can render a multi-million dollar piece of silicon completely useless. That is why verification engineers are often called the detectives of the semiconductor world, and why verification typically consumes up to seventy percent of the total chip development time and budget. Rather than testing the design manually, engineers build complex, automated environments using the Universal Verification Methodology, or UVM. We construct a testbench—a software simulation environment that wraps around our RTL design. The testbench generates millions of randomized stimulus inputs to stress-test the hardware under extreme, unexpected conditions. It sends random packets of data, triggers unexpected clock-gating cycles, and injects errors to see if the hardware recovers correctly. Monitors watch the internal signals, and scoreboards automatically compare the RTL behavior against an independent, gold-standard mathematical model of the architecture. We also embed SystemVerilog Assertions directly inside the design to constantly police critical rules—ensuring, for instance, that a FIFO queue never overflows, or that two controllers never try to write to the same bus simultaneously. We track code and functional coverage to ensure every single pathway and conditional branch has been executed and verified. Only when the testbench reaches one-hundred percent coverage and zero bugs can we confidently sign off on the design and prepare to translate our abstract code into actual physical structures.",
+        technical: "Testbench Engine: UVM Suite v1.2 • Active Checkers: 450 Assertions • Target Toggle Coverage: 98.4% • Bug Regression Status: 100% Passing"
+      },
+      {
+        id: "synthesis",
+        title: "4. Logic Synthesis",
+        caption: "Once the RTL code is completely verified and bug-free, we transition from the abstract software domain to the physical hardware domain through Logic Synthesis. Synthesis is the process of translating our high-level, human-readable SystemVerilog code into a concrete gate-level netlist. To do this, we use highly sophisticated synthesis tools and a standard cell library provided by the semiconductor foundry, such as TSMC or Samsung. This library contains pre-designed physical layouts for fundamental building blocks—like NAND gates, NOR gates, multiplexers, and flip-flops—each characterized with precise measurements of timing, power, and area. The synthesis tool acts like an extremely advanced compiler. It parses our RTL logic and maps it to these standard cells, optimizing the layout to meet our target timing constraints. We feed the tool a design constraints file that defines the clock frequencies, input delays, and output loads. The compiler then runs millions of iterations, sizing gates and adjusting logic paths to ensure that signals propagate fast enough to prevent setup and hold violations. If a signal arrives too late at a register, it causes timing violations and functional failure. Synthesis output is a gate-level netlist—a massive text file listing millions of standard cells and the microscopic wires that connect them. This netlist is mathematically equivalent to our original RTL, but it is now expressed entirely in physical electronic components ready for layout.",
+        technical: "Target Technology Node: TSMC 5nm FinFET • Standard Cell Library: High-Density (HD) Track • Timing Slack Target: +0.05 ns • Total Equivalent Gate Count: 14.2M Gates"
+      },
+      {
+        id: "phys",
+        title: "5. Physical Design (Back-End)",
+        caption: "With the gate-level netlist completed, we move to the physical design phase—the physical implementation of the netlist onto a silicon die. This is where we define the exact coordinates of every transistor and wire. We begin with Floorplanning, where we decide the absolute layout of the chip. We allocate areas for large IP blocks—like CPU cores, GPU engines, memory controllers, and the Multiply-Accumulate arrays—and set up the power grid of copper tracks to distribute stable voltage across the chip. Next is Placement, where the tool places millions of standard cells within the remaining silicon real estate, grouping related components close together to minimize wire length and signal delay. We then perform Clock Tree Synthesis to build a dedicated network of buffer gates that distributes the clock signal simultaneously to every single register on the chip, preventing clock skew. Following this, the Routing engine draws the final microscopic physical copper wires to connect the cells across multiple metal layers, navigating complex paths like a highly dense city highway system. Throughout this process, we perform continuous Design Rule Checks, or DRC, to ensure wire spacings conform to atomic lithography limits, and Layout Versus Schematic, or LVS, checks to verify that the physical wiring perfectly matches the original synthesized netlist. The result is a clean, physically sound layout ready for manufacturing.",
+        technical: "Layout Grid: 12 Metal Layers • Density Constraint: 84.2% Area Utilization • DRC Errors: 0 Clean • LVS Check: Match Layout with Schematic"
+      },
+      {
+        id: "mask",
+        title: "6. GDSII / Mask Generation",
+        caption: "Once the physical layout is completed and passes all verification checks, we export the physical coordinates into an industry-standard database format, typically GDSII or OASIS. This file contains the precise geometric polygons representing every single wire, via, and transistor layer on the silicon die. This data is used to manufacture the photolithographic masks, which are polished glass plates coated with chrome patterns. Think of these masks like high-tech stencils or photographic negatives. To manufacture a modern chip, we require a set of seventy or more individual masks—one for each physical layer of the silicon, from the base silicon implants up to the final metal interconnects. However, at advanced process nodes like three-nanometer or five-nanometer, the physical wavelength of the lasers used in manufacturing is larger than the microscopic wires we are trying to print. This causes severe light diffraction, blurring the printed features. To combat this, we perform Optical Proximity Correction, or OPC. Advanced algorithms modify the shapes on the mask—adding serifs to corners, shifting edges, and adding auxiliary features—so that when the laser light diffracts, it lands on the silicon in the exact rectangular shape we intended. Once OPC is completed and verified, the finalized mask data is sent to a mask-writing facility to create the physical mask set, representing the official transition of our design into physical manufacturing.",
+        technical: "Database Format: GDSII Stream Format • Photolithography Masks: 72 Glass Plates • EUV Wavelength: 13.5 nm • OPC Resolution Enhancements: Active"
+      },
+      {
+        id: "fab",
+        title: "7. Fabrication & Packaging",
+        caption: "With the physical mask sets complete, we enter the high-precision world of Semiconductor Fabrication and Packaging. Manufacturing takes place inside a semiconductor fabrication plant—often called a fab or a cleanroom—where the air is hundreds of times cleaner than an operating room to prevent microscopic dust from ruining the silicon. The process starts with a circular wafer of pure, ultra-refined silicon, typically three-hundred millimeters in diameter. Over several months, the wafer undergoes a repetitive cycle of hundreds of steps to build the transistors layer by layer. First, we apply a light-sensitive chemical called photoresist to the wafer. We shine deep or extreme ultraviolet light through our photolithographic masks to project the circuit patterns onto the silicon. Exposed areas are chemically washed away in an etching process, and we introduce atomic impurities—called ion implantation—to modify the electrical conductivity of the silicon, creating source and drain regions for our transistors. This cycle repeats for dozens of layers, building up three-dimensional FinFET structures and stacking multiple levels of copper wires to connect them. Once the wafer is fully processed, it is tested for functional yield and diced into thousands of individual rectangular silicon chips, known as dies. Each working die is mounted inside a protective package. We use advanced Flip-Chip packaging, bonding microscopic solder bumps on the chip directly to a package substrate, which is sealed with a metal lid to dissipate heat and expose pins for soldering onto system boards.",
+        technical: "Wafer Geometry: 300mm Silicon • Process technology: EUV Lithography • Packaging Style: Flip-Chip Ball Grid Array (FC-BGA) • Pins Count: 1156 Bumps"
+      },
+      {
+        id: "postval",
+        title: "8. Post-Silicon Validation",
+        caption: "Finally, the manufactured and packaged silicon chips arrive back at our testing laboratories, marking the start of Post-Silicon Validation. This is the moment of truth. Unlike pre-silicon simulations which run in software at a snail's pace of a few hertz, physical chips run at their full multi-gigahertz speed in real-time. We mount the first-spin engineering samples onto custom validation boards equipped with specialized testing rigs, cooling chambers, and high-frequency oscilloscopes. We run stress-testing software, operating systems, and real-world AI model workloads to verify that the physical silicon behaves exactly as designed. We perform voltage and temperature sweeps, plotting what is called a Shmoo curve to map out the exact envelope of stable operation. This tells us the maximum frequency the chip can achieve at different supply voltages, and identifies the physical margins of the silicon. We also test for physical reliability and thermal characteristics over extended periods. Even with the best pre-silicon testing, real silicon often reveals subtle hardware errata or bugs. We document these in official errata lists and design firmware or driver workarounds to disable problematic features or adjust timing parameters. Once the chip passes post-silicon validation, has its firmware certified, and reaches target production yields, it is officially ready to be mass-produced and shipped to power consumer devices worldwide.",
+        technical: "Lab Validation Board: PCIe Gen5 DevKit • Shmoo Sweep Bounds: 0.7V to 1.15V @ 500MHz to 2.5GHz • Thermal Chambers: -40C to +125C Range • Errata List: 0 Critical Bugs"
+      }
+    ];
+
+    let currentStart = 0;
+    return rawChapters.map((chap) => {
+      const words = chap.caption.split(/\s+/).filter(Boolean).length;
+      // Typical speaking speed is ~2.3 words per second
+      const readingDuration = Math.max(15, words / 2.3);
+      const pauseDuration = 3.0; // Short 3-second transition pause between steps
+      const duration = readingDuration + pauseDuration;
+      const start = currentStart;
+      const end = start + duration;
+      currentStart = end;
+      return {
+        ...chap,
+        readingDuration,
+        pauseDuration,
+        duration,
+        start,
+        end
+      };
+    });
+  }, []);
+
+  const activeChapterIdx = useMemo(() => {
+    const idx = chapters.findIndex(chap => currentTime >= chap.start && currentTime < chap.end);
+    if (idx === -1) {
+      if (currentTime >= chapters[chapters.length - 1].end) {
+        return chapters.length - 1;
+      }
+      return 0;
     }
-  ];
+    return idx;
+  }, [currentTime, chapters]);
 
-  const activeChapterIdx = Math.min(7, Math.floor(currentTime / 60));
   const activeChapter = chapters[activeChapterIdx];
+  const totalDuration = chapters[chapters.length - 1].end;
 
-  // Local step progress drives time-varying animations (0 to 1)
-  const localStepProgress = (currentTime % 60) / 60;
+  // Local step progress drives time-varying animations (0 to 1) based on reading duration
+  const localStepProgress = useMemo(() => {
+    const elapsedInChapter = currentTime - activeChapter.start;
+    return Math.min(1, elapsedInChapter / activeChapter.readingDuration);
+  }, [currentTime, activeChapter]);
 
   // Web Audio Synth state
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -191,11 +211,24 @@ export const SiliconEngineeringVideoPlayer: React.FC = () => {
   // Speech Synthesis Voiceover API Setup
   const hasSpeechSynth = typeof window !== "undefined" && !!window.speechSynthesis;
   const lastSpokenTextRef = useRef<string>("");
+  const isSpeakingRef = useRef(false);
+  const useVoiceoverRef = useRef(useVoiceover);
+  const isMutedRef = useRef(isMuted);
+
+  // Synchronize state values into refs for the non-blocking timer interval
+  useEffect(() => {
+    useVoiceoverRef.current = useVoiceover;
+  }, [useVoiceover]);
+
+  useEffect(() => {
+    isMutedRef.current = isMuted;
+  }, [isMuted]);
 
   const speakCurrentCaption = (force = false) => {
     if (!hasSpeechSynth || isMuted || !isPlaying || !useVoiceover) {
       if (hasSpeechSynth) {
         window.speechSynthesis.cancel();
+        isSpeakingRef.current = false;
       }
       return;
     }
@@ -203,12 +236,13 @@ export const SiliconEngineeringVideoPlayer: React.FC = () => {
     const textToSpeak = activeChapter.caption;
 
     // Avoid double speaking identical captions unless forced
-    if (!force && lastSpokenTextRef.current === textToSpeak && window.speechSynthesis.speaking) {
+    if (!force && lastSpokenTextRef.current === textToSpeak && (isSpeakingRef.current || window.speechSynthesis.speaking)) {
       return;
     }
 
     try {
       window.speechSynthesis.cancel();
+      isSpeakingRef.current = true;
 
       const utterance = new SpeechSynthesisUtterance(textToSpeak);
       const voices = window.speechSynthesis.getVoices();
@@ -228,10 +262,18 @@ export const SiliconEngineeringVideoPlayer: React.FC = () => {
       utterance.pitch = 1.0;
       utterance.volume = 1.0;
 
+      utterance.onend = () => {
+        isSpeakingRef.current = false;
+      };
+      utterance.onerror = () => {
+        isSpeakingRef.current = false;
+      };
+
       lastSpokenTextRef.current = textToSpeak;
       window.speechSynthesis.speak(utterance);
     } catch (e) {
       console.warn("Speech synthesis error:", e);
+      isSpeakingRef.current = false;
     }
   };
 
@@ -242,12 +284,14 @@ export const SiliconEngineeringVideoPlayer: React.FC = () => {
     } else {
       if (hasSpeechSynth) {
         window.speechSynthesis.cancel();
+        isSpeakingRef.current = false;
       }
     }
 
     return () => {
       if (hasSpeechSynth) {
         window.speechSynthesis.cancel();
+        isSpeakingRef.current = false;
       }
     };
   }, [isPlaying, isMuted, useVoiceover, activeChapterIdx, playbackSpeed]);
@@ -256,7 +300,7 @@ export const SiliconEngineeringVideoPlayer: React.FC = () => {
   useEffect(() => {
     if (!hasSpeechSynth) return;
     const handleVoicesChanged = () => {
-      if (isPlaying && !isMuted && useVoiceover && !window.speechSynthesis.speaking) {
+      if (isPlaying && !isMuted && useVoiceover && !window.speechSynthesis.speaking && !isSpeakingRef.current) {
         speakCurrentCaption();
       }
     };
@@ -333,9 +377,30 @@ export const SiliconEngineeringVideoPlayer: React.FC = () => {
       intervalId = setInterval(() => {
         setCurrentTime((prev) => {
           const next = prev + 0.1 * playbackSpeed;
-          if (next >= 480) {
+          
+          const currentCh = chapters[activeChapterIdx];
+          if (!currentCh) {
             setIsPlaying(false);
-            return 480;
+            return prev;
+          }
+          const elapsedInChapter = prev - currentCh.start;
+          
+          // Check if we are finished with the reading duration of this chapter
+          if (elapsedInChapter >= currentCh.readingDuration) {
+            // If voiceover is active, not muted, and currently speaking, hold the chapter progress
+            const isTtsActive = useVoiceoverRef.current && !isMutedRef.current;
+            const isCurrentlySpeaking = isSpeakingRef.current || (hasSpeechSynth && window.speechSynthesis.speaking);
+            
+            if (isTtsActive && isCurrentlySpeaking) {
+              // Pause until speech has completed
+              return prev;
+            }
+          }
+          
+          const totalDuration = chapters[chapters.length - 1].end;
+          if (next >= totalDuration) {
+            setIsPlaying(false);
+            return totalDuration;
           }
           return next;
         });
@@ -344,7 +409,7 @@ export const SiliconEngineeringVideoPlayer: React.FC = () => {
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isPlaying, playbackSpeed]);
+  }, [isPlaying, playbackSpeed, chapters, activeChapterIdx]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -1155,7 +1220,7 @@ export const SiliconEngineeringVideoPlayer: React.FC = () => {
           <div id="scrubber-container" className="space-y-1">
             <div className="flex justify-between text-[10px] font-mono text-slate-500">
               <span className="font-bold text-slate-400">
-                {formatTime(currentTime)} <span className="text-slate-600">/ 08:00</span>
+                {formatTime(currentTime)} <span className="text-slate-600">/ {formatTime(totalDuration)}</span>
               </span>
               <span className="text-indigo-400 font-bold uppercase">{activeChapter.title}</span>
             </div>
@@ -1173,7 +1238,7 @@ export const SiliconEngineeringVideoPlayer: React.FC = () => {
                   className={`absolute h-2.5 w-2.5 rounded-full border border-slate-950 z-20 transform -translate-x-1/2 cursor-pointer transition-all ${
                     currentTime >= chap.start ? "bg-indigo-400 scale-110 shadow-[0_0_8px_rgba(99,102,241,0.8)]" : "bg-slate-700 hover:bg-slate-500"
                   }`}
-                  style={{ left: `${(chap.start / 480) * 100}%` }}
+                  style={{ left: `${(chap.start / totalDuration) * 100}%` }}
                   title={chap.title}
                 />
               ))}
@@ -1181,7 +1246,7 @@ export const SiliconEngineeringVideoPlayer: React.FC = () => {
                 id="video-timeline-slider"
                 type="range"
                 min="0"
-                max="480"
+                max={totalDuration}
                 step="0.1"
                 value={currentTime}
                 onChange={(e) => {
@@ -1201,14 +1266,15 @@ export const SiliconEngineeringVideoPlayer: React.FC = () => {
               <button
                 id="btn-skip-back"
                 onClick={() => {
-                  const currentChIdx = Math.floor(currentTime / 60);
-                  const currentChStart = currentChIdx * 60;
+                  const currentCh = chapters[activeChapterIdx];
+                  const currentChStart = currentCh.start;
                   // If we are at least 3 seconds inside, skip to start of this chapter
                   if (currentTime - currentChStart > 3) {
                     setCurrentTime(currentChStart);
                   } else {
                     // Skip to start of previous chapter
-                    setCurrentTime(Math.max(0, (currentChIdx - 1) * 60));
+                    const prevCh = chapters[Math.max(0, activeChapterIdx - 1)];
+                    setCurrentTime(prevCh.start);
                   }
                   initAudio();
                 }}
@@ -1248,7 +1314,7 @@ export const SiliconEngineeringVideoPlayer: React.FC = () => {
               <button
                 id="btn-seek-forward"
                 onClick={() => {
-                  setCurrentTime((prev) => Math.min(480, prev + 10));
+                  setCurrentTime((prev) => Math.min(totalDuration, prev + 10));
                   initAudio();
                 }}
                 className="px-2 py-1 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-lg text-[9px] font-mono font-bold text-slate-400 hover:text-white transition-all"
@@ -1261,8 +1327,8 @@ export const SiliconEngineeringVideoPlayer: React.FC = () => {
               <button
                 id="btn-skip-forward"
                 onClick={() => {
-                  const currentChIdx = Math.floor(currentTime / 60);
-                  setCurrentTime(Math.min(420, (currentChIdx + 1) * 60));
+                  const nextCh = chapters[Math.min(chapters.length - 1, activeChapterIdx + 1)];
+                  setCurrentTime(nextCh.start);
                   initAudio();
                 }}
                 className="p-1.5 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-lg text-slate-400 hover:text-white transition-all"
@@ -1362,7 +1428,7 @@ export const SiliconEngineeringVideoPlayer: React.FC = () => {
                     </div>
                     <div className="space-y-0.5">
                       <span className="text-[10.5px] font-bold block leading-none">{chap.title.replace(/^\d\.\s/, '')}</span>
-                      <span className="text-[8.5px] text-slate-500 block leading-none">{`0${idx}:00 - 0${idx + 1}:00`}</span>
+                      <span className="text-[8.5px] text-slate-500 block leading-none">{`${formatTime(chap.start)} - ${formatTime(chap.end)}`}</span>
                     </div>
                   </div>
                   <ChevronRight className={`w-3.5 h-3.5 ${isCurrent ? "text-indigo-400" : "text-slate-600"}`} />
